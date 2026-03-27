@@ -1,0 +1,110 @@
+CLASS zcl_so_data_loader DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+
+    INTERFACES if_oo_adt_classrun .
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS zcl_so_data_loader IMPLEMENTATION.
+
+
+  METHOD if_oo_adt_classrun~main.
+
+    DATA: lv_success    TYPE abap_bool VALUE abap_true,
+          ls_db         TYPE zso_hdr,
+          ls_idb        TYPE zso_item_001,
+          ls_sidb       TYPE zso_sched_002,
+          lv_so         TYPE zso_hdr-so_id VALUE '100001',
+          lv_item       TYPE zso_item_001-item_id VALUE '00001',
+          lv_sched_item TYPE zso_sched_002-sched_id VALUE '00001'.
+
+    DELETE FROM zso_hdr.
+    DELETE FROM zso_item_001.
+    DELETE FROM zso_sched_002.
+
+    TRY.
+
+        DO 50 TIMES.
+
+          ls_db-client        = sy-mandt.
+          ls_db-so_id        = lv_so + 10.
+          ls_db-buyer_name     = 'Windows'.
+          ls_db-doc_date = '20260312'.
+          ls_db-currency     = 'USD'.
+          ls_db-total_amount       = '100'.
+
+          INSERT zso_hdr FROM @ls_db.
+
+          COMMIT WORK.
+
+          lv_so = lv_so + 1.
+
+          DO 4 TIMES.
+
+
+
+            ls_idb-client     = sy-mandt.
+
+            ls_idb-so_id     = ls_db-so_id.
+            ls_idb-item_id   = lv_item.
+            ls_idb-product_id = 'Note Book'.
+            ls_idb-quantity  = '1000'.
+            ls_idb-unit      = 'EA'.
+            ls_idb-price     = '1000'.
+            ls_idb-currency  = 'USD'.
+
+            " Auto calculate net amount
+            ls_idb-net_amount = ls_idb-quantity * ls_idb-price.
+
+            INSERT zso_item_001 FROM @ls_idb.
+
+            COMMIT WORK.
+
+
+            DO 3 TIMES.
+
+              ls_sidb-client  = sy-mandt.
+              ls_sidb-so_id    = ls_db-so_id.
+              ls_sidb-item_id  = lv_item.
+              ls_sidb-sched_id = lv_sched_item.
+              ls_sidb-req_date = '20260322'.
+              ls_sidb-quantity = 1000.
+              ls_sidb-unit     = 'EA'.
+              ls_sidb-req_quantity = '800'.
+              ls_sidb-req_unit    = 'EA'.
+
+              INSERT zso_sched_002 FROM @ls_sidb.
+
+              COMMIT WORK.
+
+              lv_sched_item = lv_sched_item + 1.
+
+            ENDDO.
+
+            lv_item = lv_item + 1.
+
+            lv_sched_item = '00001'.
+
+          ENDDO.
+
+          lv_item = '00001'.
+
+        ENDDO.
+
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        ROLLBACK WORK.
+        lv_success = abap_false.
+    ENDTRY.
+
+
+  ENDMETHOD.
+
+
+ENDCLASS.
